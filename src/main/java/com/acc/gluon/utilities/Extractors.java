@@ -1,4 +1,4 @@
-package com.acc.gluon.sql;
+package com.acc.gluon.utilities;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;

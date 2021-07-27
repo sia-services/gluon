@@ -2,6 +2,7 @@ package com.acc.gluon.ds;
 
 import com.acc.gluon.sql.*;
 
+import javax.sql.DataSource;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -12,7 +13,9 @@ import java.util.stream.Collectors;
 public class SQLManager implements AutoCloseable {
     private final Connection connection;
 
-    public SQLManager(Connection connection) {
+    public SQLManager(DataSource ds) throws SQLException {
+        var connection = ds.getConnection();
+        connection.setAutoCommit(false);
         this.connection = connection;
     }
 
