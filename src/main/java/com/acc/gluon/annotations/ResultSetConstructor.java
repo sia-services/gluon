@@ -16,7 +16,7 @@ public @interface ResultSetConstructor {
      * If present, do not include this field in the ResultSet extractor,
      * but provide this field in constructor parameter as is
      */
-    @Target({ElementType.FIELD, ElementType.METHOD})
+    @Target({ElementType.FIELD, ElementType.METHOD, ElementType.RECORD_COMPONENT})
     @Retention(RetentionPolicy.SOURCE)
     @interface Provided {}
 
@@ -24,7 +24,7 @@ public @interface ResultSetConstructor {
      * Join Entities (with recursive generation of rs constructor).
      * Valid only for Set<Joined> or List<Joined>
      */
-    @Target({ElementType.FIELD, ElementType.METHOD})
+    @Target({ElementType.FIELD, ElementType.METHOD, ElementType.RECORD_COMPONENT})
     @Retention(RetentionPolicy.SOURCE)
     @interface Join {}
 }

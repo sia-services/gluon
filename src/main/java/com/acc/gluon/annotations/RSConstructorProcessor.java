@@ -1,9 +1,8 @@
 package com.acc.gluon.annotations;
 
-import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
-import javax.annotation.processing.SupportedSourceVersion;
+import com.google.auto.service.AutoService;
+
+import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
@@ -15,6 +14,7 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.Set;
 
+@AutoService(Processor.class)
 @SupportedAnnotationTypes("com.acc.gluon.annotations.ResultSetConstructor")
 @SupportedSourceVersion(SourceVersion.RELEASE_16)
 public class RSConstructorProcessor extends AbstractProcessor {
