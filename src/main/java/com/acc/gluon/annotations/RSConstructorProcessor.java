@@ -21,32 +21,37 @@ import java.util.Set;
 public class RSConstructorProcessor extends AbstractProcessor {
 
     /** public for ServiceLoader */
-    public RSConstructorProcessor() {
-        // System.out.println("RSConstructorProcessor new");
-    }
+    public RSConstructorProcessor() {}
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        System.out.println("RSConstructorProcessor process");
         for (var e : roundEnv.getElementsAnnotatedWith(ResultSetConstructor.class)) {
             if (e.getKind() == ElementKind.RECORD) {
-                String name = e.getSimpleName().toString();
-                var clazz = e.getEnclosingElement();
+                var enclosingElement = e.getEnclosingElement();
 
-                if (e instanceof TypeElement te) {
-                    System.out.println("main element is TypeElement");
+                if (e instanceof TypeElement te && enclosingElement instanceof PackageElement pe) {
+                    generateImplementation(pe, te);
+                } else {
+                    processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,"Element: " + e.getSimpleName() + "; kind: " + e.getKind().name() + "; enclosing element: " + enclosingElement.getClass());
                 }
-
-                if (clazz instanceof PackageElement pe) {
-                    System.out.println("Enclosing element is PackageElement");
-                }
-
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Element name: " + name + "; kind: " + e.getKind().name() + "; enclosing element: " + clazz.getClass());
             } else {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,"Element kind: " + e.getKind().name() + " is not a RECORD");
-                continue;
             }
         }
         return true;
+    }
+
+    private void generateImplementation(PackageElement pe, TypeElement te) {
+        String packagename = pe.getSimpleName().toString();
+        String typeName = te.getSimpleName().toString();
+
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Record: " + packagename + "." + typeName);
+
+        for (var rc : te.getRecordComponents()) {
+            var rcKind = rc.getKind();
+            var rcName = rc.getSimpleName();
+
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,";   component: " + rcKind.name() + " " + rcName);
+        }
     }
 }
