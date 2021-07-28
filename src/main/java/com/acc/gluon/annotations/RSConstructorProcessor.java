@@ -7,7 +7,10 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.PackageElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import java.io.IOException;
@@ -45,19 +48,13 @@ public class RSConstructorProcessor extends AbstractProcessor {
         String packagename = pe.getQualifiedName().toString();
         String typeName = te.getSimpleName().toString();
 
+
+
         processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Record: " + packagename + "." + typeName);
 
         for (var rc : te.getRecordComponents()) {
             var rcName = rc.getSimpleName();
             TypeMirror rcType = rc.asType();
-
-            for (var am : rc.getAnnotationMirrors()) {
-                System.out.println("; ann I type: " + am.getAnnotationType().toString());
-            }
-
-            for (var am : rcType.getAnnotationMirrors()) {
-                System.out.println("; ann II type: " + am.getAnnotationType().toString());
-            }
 
             var provided = rc.getAnnotation(ResultSetConstructor.Provided.class) != null;
             var join = rc.getAnnotation(ResultSetConstructor.Join.class) != null;
@@ -69,6 +66,17 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 msg += " PRV";
             }else if (join) {
                 msg += " JOIN";
+            }
+
+            if (typeKind == TypeKind.DECLARED) {
+                var rcte = processingEnv.getTypeUtils().asElement(rcType);
+                if (rcte instanceof DeclaredType dt) {
+                    var declaredTypeName = dt.asElement().getSimpleName();
+                    msg += " dtn: " + declaredTypeName;
+                    for (var ta : dt.getTypeArguments()) {
+                        msg += " ;" + ta;
+                    }
+                }
             }
 
             processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,msg);
