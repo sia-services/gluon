@@ -10,15 +10,17 @@ import javax.tools.Diagnostic;
 import java.util.Set;
 
 @SupportedAnnotationTypes("com.acc.gluon.annotations.ResultSetConstructor")
-@SupportedSourceVersion(SourceVersion.RELEASE_11)
+@SupportedSourceVersion(SourceVersion.RELEASE_16)
 public class RSConstructorProcessor extends AbstractProcessor {
 
     /** public for ServiceLoader */
     public RSConstructorProcessor() {
+        System.out.println("RSConstructorProcessor new");
     }
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        System.out.println("RSConstructorProcessor process");
         for (var e : roundEnv.getElementsAnnotatedWith(ResultSetConstructor.class)) {
             processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Element kind: " + e.getKind().name());
         }
