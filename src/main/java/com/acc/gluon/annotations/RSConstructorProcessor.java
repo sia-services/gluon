@@ -6,6 +6,7 @@ import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.PackageElement;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
@@ -32,7 +33,15 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 String name = e.getSimpleName().toString();
                 var clazz = e.getEnclosingElement();
 
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Element kind: " + e.getKind().name() + "; enclosing element: " + clazz.getClass());
+                if (e instanceof TypeElement te) {
+                    System.out.println("main element is TypeElement");
+                }
+
+                if (clazz instanceof PackageElement pe) {
+                    System.out.println("Enclosing element is PackageElement");
+                }
+
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Element name: " + name + "; kind: " + e.getKind().name() + "; enclosing element: " + clazz.getClass());
             } else {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,"Element kind: " + e.getKind().name() + " is not a RECORD");
                 continue;
