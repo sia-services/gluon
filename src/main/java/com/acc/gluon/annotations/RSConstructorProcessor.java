@@ -30,9 +30,9 @@ public class RSConstructorProcessor extends AbstractProcessor {
         for (var e : roundEnv.getElementsAnnotatedWith(ResultSetConstructor.class)) {
             if (e.getKind() == ElementKind.RECORD) {
                 String name = e.getSimpleName().toString();
-                TypeElement clazz = (TypeElement) e.getEnclosingElement();
+                var clazz = e.getEnclosingElement();
 
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Element kind: " + e.getKind().name());
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Element kind: " + e.getKind().name() + "; enclosing element: " + clazz.getClass());
             } else {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,"Element kind: " + e.getKind().name() + " is not a RECORD");
                 continue;
