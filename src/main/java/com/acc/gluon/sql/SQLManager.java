@@ -1,7 +1,5 @@
 package com.acc.gluon.sql;
 
-import com.acc.gluon.sql.*;
-
 import javax.sql.DataSource;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
