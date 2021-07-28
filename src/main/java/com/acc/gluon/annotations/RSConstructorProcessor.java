@@ -52,10 +52,26 @@ public class RSConstructorProcessor extends AbstractProcessor {
             TypeMirror rcType = rc.asType();
 
             for (var am : rc.getAnnotationMirrors()) {
-                System.out.println("; ann type: " + am.getAnnotationType().toString());
+                System.out.println("; ann I type: " + am.getAnnotationType().toString());
             }
 
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,";   component: " + rcType + " " + rcName);
+            for (var am : rcType.getAnnotationMirrors()) {
+                System.out.println("; ann II type: " + am.getAnnotationType().toString());
+            }
+
+            var provided = rc.getAnnotation(ResultSetConstructor.Provided.class) != null;
+            var join = rc.getAnnotation(ResultSetConstructor.Join.class) != null;
+
+            var typeKind = rcType.getKind();
+
+            var msg = ";    " + rcType + " " + rcName + " [" + typeKind.name() + "]";
+            if (provided) {
+                msg += " PRV";
+            }else if (join) {
+                msg += " JOIN";
+            }
+
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,msg);
         }
     }
 }
