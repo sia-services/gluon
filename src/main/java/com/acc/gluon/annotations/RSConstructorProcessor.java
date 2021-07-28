@@ -42,16 +42,20 @@ public class RSConstructorProcessor extends AbstractProcessor {
     }
 
     private void generateImplementation(PackageElement pe, TypeElement te) {
-        String packagename = pe.getSimpleName().toString();
+        String packagename = pe.getQualifiedName().toString();
         String typeName = te.getSimpleName().toString();
 
         processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Record: " + packagename + "." + typeName);
 
         for (var rc : te.getRecordComponents()) {
-            var rcKind = rc.getKind();
             var rcName = rc.getSimpleName();
+            TypeMirror rcType = rc.asType();
 
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,";   component: " + rcKind.name() + " " + rcName);
+            for (var am : rc.getAnnotationMirrors()) {
+                System.out.println("; ann type: " + am.getAnnotationType().toString());
+            }
+
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,";   component: " + rcType + " " + rcName);
         }
     }
 }
