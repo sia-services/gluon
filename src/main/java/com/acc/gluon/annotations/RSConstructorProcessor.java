@@ -30,6 +30,9 @@ import static com.acc.gluon.utilities.StringUtils.capitalize;
 @SupportedAnnotationTypes("com.acc.gluon.annotations.ResultSetConstructor")
 @SupportedSourceVersion(SourceVersion.RELEASE_16)
 public class RSConstructorProcessor extends AbstractProcessor {
+    private static final String PACKAGE_SUFFIX = ".impl";
+    private static final String IMPL_CLASS_SUFFIX = "Constructor";
+
     private static final String BLOB_EXTRACTOR = "com.acc.gluon.sql.Extractors.getBlob(rs, ";
     private static final String BOOLEAN_EXTRACTOR = "com.acc.gluon.sql.Extractors.getBoolean(rs, ";
     private static final String INTEGER_EXTRACTOR = "com.acc.gluon.sql.Extractors.getNullableInt(rs, ";
@@ -80,7 +83,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
         try {
             JavaFileObject f = processingEnv
                     .getFiler()
-                    .createSourceFile(packagename + "." + typename);
+                    .createSourceFile(packagename+ PACKAGE_SUFFIX + "." + typename + IMPL_CLASS_SUFFIX);
 
             processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "Creating to " + f.toUri());
 
@@ -102,12 +105,11 @@ public class RSConstructorProcessor extends AbstractProcessor {
     }
 
     private int generateImplementation(PrintWriter pw, String packagename, String typename, TypeElement te, int rsIndex, List<Element> recursiveElements) {
-        String implClassName = typename + "Constructor";
         String fqcn = packagename + "." + typename;
 
         int[] localIndex = new int[] { rsIndex };
 
-        printClass(pw, packagename + ".impl", implClassName, () -> {
+        printClass(pw, packagename + PACKAGE_SUFFIX, typename + IMPL_CLASS_SUFFIX, () -> {
 
             boolean firstRecord = true;
             // print function header
