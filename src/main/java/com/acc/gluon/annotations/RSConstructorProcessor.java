@@ -109,14 +109,16 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
         int[] localIndex = new int[] { rsIndex };
 
-        printClass(pw, packagename + PACKAGE_SUFFIX, typename + IMPL_CLASS_SUFFIX, () -> {
+        printClass(pw, packagename + PACKAGE_SUFFIX, typename + IMPL_CLASS_SUFFIX, List.of(
+                "java.sql.ResultSet", "java.sql.SQLException"
+        ), () -> {
 
             boolean firstRecord = true;
             // print function header
             ArrayList<String> arguments = new ArrayList<>();
-            StringBuilder functionBody = new StringBuilder("    return new " + fqcn + "(");
+            StringBuilder functionBody = new StringBuilder("        return new " + fqcn + "(");
 
-            arguments.add("java.sql.ResultSet rs");
+            arguments.add("ResultSet rs");
 
             for (var rc : te.getRecordComponents()) {
                 var rcName = rc.getSimpleName();
@@ -134,13 +136,12 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 } else {
                     functionBody.append(",");
                 }
-                functionBody.append("\n      ");
+                functionBody.append("\n          ");
                 if (provided != null) {
                     functionBody.append(rcName);
                 } else {
                     functionBody.append( processRecordComponent(localIndex[0], rcType, join, recursiveElements) );
                 }
-                functionBody.append("\n");
 
                 if (provided != null && provided.value() == Source.ResultSet) {
                     localIndex[0]++;
@@ -150,9 +151,8 @@ public class RSConstructorProcessor extends AbstractProcessor {
                     localIndex[0]++;
                 }
             }
-
-            functionBody.append(");");
-            printMethod(pw, "construct", fqcn, true, true, arguments, functionBody);
+            functionBody.append("\n            );");
+            printMethod(pw, "construct", fqcn, true, true, arguments, List.of("SQLException"), functionBody);
 
         });
 
@@ -221,7 +221,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 var arrayType = at.getComponentType();
 
                 if (arrayType.getKind() != TypeKind.BYTE) {
-                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Not supported type for array: " + arrayType.toString() + "; must be only byte");
+                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Not supported type for array: " + arrayType + "; must be only byte");
                 }
 
                 expression.append(BLOB_EXTRACTOR).append(rsIndex).append(")");
