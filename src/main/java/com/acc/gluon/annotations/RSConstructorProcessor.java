@@ -28,16 +28,19 @@ import java.util.stream.Stream;
 public class RSConstructorProcessor extends AbstractProcessor {
 
     private static final Set<TypeKind> PRIMITIVE_TYPES = Set.of(TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG, TypeKind.DOUBLE);
-    private final Set<Name> DECLARED_TYPES;
+    private Set<Name> DECLARED_TYPES = null;
 
     /** public for ServiceLoader */
     public RSConstructorProcessor() {
-        var utils = processingEnv.getElementUtils();
-        DECLARED_TYPES =  Stream.of(String.class, Integer.class, Long.class, BigDecimal.class).map(c -> utils.getName(c.getName())).collect(Collectors.toUnmodifiableSet());
     }
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        if (DECLARED_TYPES == null) {
+            var utils = processingEnv.getElementUtils();
+            DECLARED_TYPES =  Stream.of(String.class, Integer.class, Long.class, BigDecimal.class).map(c -> utils.getName(c.getName())).collect(Collectors.toUnmodifiableSet());
+        }
+
         for (var e : roundEnv.getElementsAnnotatedWith(ResultSetConstructor.class)) {
             if (e.getKind() == ElementKind.RECORD) {
                 processRecord(e, 1);
