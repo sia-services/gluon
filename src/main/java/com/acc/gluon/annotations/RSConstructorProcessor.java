@@ -86,7 +86,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
                         for (var ta : dt.getTypeArguments()) {
                             // TODO: recursively analize; temporary create new HashSet<>() for Set && new ArrayList<>() for List
                             componentType.append(ta);
-                            var rcte = processingEnv.getTypeUtils().asElement(rcType);
+                            var rcte = processingEnv.getTypeUtils().asElement(ta);
                             if (rcte.getKind() == ElementKind.RECORD) {
                                 recursiveElements.add(rcte);
                             } else {
