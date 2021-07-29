@@ -125,6 +125,8 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
             arguments.add("ResultSet rs");
 
+            boolean[] needIOException = new boolean[] { false };
+
             for (var rc : te.getRecordComponents()) {
                 var rcName = rc.getSimpleName();
                 TypeMirror rcType = rc.asType();
@@ -145,7 +147,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 if (provided != null) {
                     functionBody.append(rcName);
                 } else {
-                    functionBody.append( processRecordComponent(localIndex[0], rcType, join, recursiveElements) );
+                    functionBody.append( processRecordComponent(localIndex[0], rcType, join, needIOException, recursiveElements) );
                 }
 
                 if (provided != null && provided.value() == Source.ResultSet) {
@@ -157,14 +159,21 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 }
             }
             functionBody.append("\n        );");
-            printMethod(pw, "construct", typename, true, true, arguments, List.of("SQLException"), functionBody);
+
+            ArrayList<String> exceptions = new ArrayList<>();
+            exceptions.add("SQLException");
+            if (needIOException[0]) {
+                exceptions.add("java.io.IOException");
+            }
+
+            printMethod(pw, "construct", typename, true, true, arguments, exceptions, functionBody);
 
         });
 
         return localIndex[0];
     }
 
-    private StringBuilder processRecordComponent(int rsIndex, TypeMirror rcType, boolean join, List<Element> recursiveElements) {
+    private StringBuilder processRecordComponent(int rsIndex, TypeMirror rcType, boolean join, boolean[] needIOException, List<Element> recursiveElements) {
         var typeKind = rcType.getKind();
 
         StringBuilder expression = new StringBuilder();
@@ -230,6 +239,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 }
 
                 expression.append(BLOB_EXTRACTOR).append(rsIndex).append(")");
+                needIOException[0] = true;
             }
         } else {
             // only TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG TypeKind.DOUBLE
