@@ -4,6 +4,7 @@ import com.google.auto.service.AutoService;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.PackageElement;
@@ -16,6 +17,8 @@ import javax.tools.JavaFileObject;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 @AutoService(Processor.class)
@@ -28,25 +31,36 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        boolean ret = true;
         for (var e : roundEnv.getElementsAnnotatedWith(ResultSetConstructor.class)) {
             if (e.getKind() == ElementKind.RECORD) {
-                var enclosingElement = e.getEnclosingElement();
-
-                if (e instanceof TypeElement te && enclosingElement instanceof PackageElement pe) {
-                    generateImplementation(pe, te);
-                } else {
-                    processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,"Element: " + e.getSimpleName() + "; kind: " + e.getKind().name() + "; enclosing element: " + enclosingElement.getClass());
-                }
+                var processResult = processRecord(e);
+                ret = ret && processResult;
             } else {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,"Element kind: " + e.getKind().name() + " is not a RECORD");
             }
         }
-        return true;
+        return ret;
     }
 
-    private void generateImplementation(PackageElement pe, TypeElement te) {
+    private boolean processRecord(Element e) {
+        var enclosingElement = e.getEnclosingElement();
+
+        if (e instanceof TypeElement te && enclosingElement instanceof PackageElement pe) {
+            return generateImplementation(pe, te);
+        } else {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Element: " + e.getSimpleName() + "; kind: " + e.getKind().name() + "; enclosing element: " + enclosingElement.getClass());
+            return false;
+        }
+    }
+
+    private boolean generateImplementation(PackageElement pe, TypeElement te) {
+        boolean ret = true;
+
         String packagename = pe.getQualifiedName().toString();
         String typeName = te.getSimpleName().toString();
+
+        List<Element> recursiveElements = new ArrayList<>();
 
         processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Record: " + packagename + "." + typeName);
 
@@ -71,7 +85,11 @@ public class RSConstructorProcessor extends AbstractProcessor {
                         componentType.append("< ");
                         for (var ta : dt.getTypeArguments()) {
                             // TODO: recursively analize; temporary create new HashSet<>() for Set && new ArrayList<>() for List
-                            componentType.append(" ;").append(ta);
+                            componentType.append(ta);
+                            var rcte = processingEnv.getTypeUtils().asElement(rcType);
+                            if (rcte.getKind() == ElementKind.RECORD) {
+                                recursiveElements.add(rcte);
+                            }
                         }
                         componentType.append(" >");
                     }
@@ -89,5 +107,12 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
             processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, msg.toString());
         }
+
+        for (var recursiveElement : recursiveElements) {
+            var processResult = processRecord(recursiveElement);
+            ret = ret && processResult;
+        }
+
+        return ret;
     }
 }
