@@ -33,10 +33,12 @@ public class RSConstructorProcessor extends AbstractProcessor {
     private static final String PACKAGE_SUFFIX = ".impl";
     private static final String IMPL_CLASS_SUFFIX = "Constructor";
 
-    private static final String BLOB_EXTRACTOR = "com.acc.gluon.sql.Extractors.getBlob(rs, ";
-    private static final String BOOLEAN_EXTRACTOR = "com.acc.gluon.sql.Extractors.getBoolean(rs, ";
-    private static final String INTEGER_EXTRACTOR = "com.acc.gluon.sql.Extractors.getNullableInt(rs, ";
-    private static final String LONG_EXTRACTOR = "com.acc.gluon.sql.Extractors.getNullableLong(rs, ";
+    private static final String BLOB_EXTRACTOR = "Extractors.getBlob(rs, ";
+    private static final String BOOLEAN_EXTRACTOR = "Extractors.getBoolean(rs, ";
+    private static final String INTEGER_EXTRACTOR = "Extractors.getNullableInt(rs, ";
+    private static final String LONG_EXTRACTOR = "Extractors.getNullableLong(rs, ";
+
+    private static final List<String> IMPORTS = List.of("java.sql.ResultSet", "java.sql.SQLException", "com.acc.gluon.sql.Extractors");
 
     private static final Set<TypeKind> PRIMITIVE_TYPES = Set.of(TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG, TypeKind.DOUBLE);
     private Set<String> DECLARED_TYPES = null;
@@ -109,14 +111,12 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
         int[] localIndex = new int[] { rsIndex };
 
-        printClass(pw, packagename + PACKAGE_SUFFIX, typename + IMPL_CLASS_SUFFIX, List.of(
-                "java.sql.ResultSet", "java.sql.SQLException"
-        ), () -> {
+        printClass(pw, packagename + PACKAGE_SUFFIX, typename + IMPL_CLASS_SUFFIX, IMPORTS, () -> {
 
             boolean firstRecord = true;
             // print function header
             ArrayList<String> arguments = new ArrayList<>();
-            StringBuilder functionBody = new StringBuilder("        return new " + fqcn + "(");
+            StringBuilder functionBody = new StringBuilder("        return new " + typename + "(");
 
             arguments.add("ResultSet rs");
 
@@ -152,7 +152,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 }
             }
             functionBody.append("\n            );");
-            printMethod(pw, "construct", fqcn, true, true, arguments, List.of("SQLException"), functionBody);
+            printMethod(pw, "construct", typename, true, true, arguments, List.of("SQLException"), functionBody);
 
         });
 

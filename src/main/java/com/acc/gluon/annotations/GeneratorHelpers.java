@@ -15,7 +15,7 @@ public class GeneratorHelpers {
         pw.println("package " + packagename + ";");
         pw.println();
         for (var imp : imports) {
-            pw.println("import " + imp);
+            pw.println("import " + imp + ";");
         }
         pw.println();
         pw.println("public class " + classname + " {");
@@ -42,7 +42,7 @@ public class GeneratorHelpers {
                 .append(") ");
 
         if (exceptions.size() > 0) {
-            header.append(" throws ").append(String.join(" ", exceptions));
+            header.append("throws ").append(String.join(" ", exceptions));
         }
 
         // finalize function header
@@ -52,6 +52,6 @@ public class GeneratorHelpers {
         // function body
         writer.println(body);
         // finalize function
-        writer.println("        }");
+        writer.println("    }");
     }
 }
