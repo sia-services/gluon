@@ -61,25 +61,28 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
             var typeKind = rcType.getKind();
 
-            var msg = ";    " + rcType + " " + rcName + " [" + typeKind.name() + "]";
+            StringBuilder msg = new StringBuilder(";    " + rcType + " " + rcName + " [" + typeKind.name() + "]");
             if (provided) {
-                msg += " PRV";
+                msg.append(" PRV");
             }else if (join) {
-                msg += " JOIN";
+                msg.append(" JOIN");
             }
 
             if (typeKind == TypeKind.DECLARED) {
                 var rcte = processingEnv.getTypeUtils().asElement(rcType);
+                // TODO: not working
                 if (rcte instanceof DeclaredType dt) {
                     var declaredTypeName = dt.asElement().getSimpleName();
-                    msg += " dtn: " + declaredTypeName;
+                    msg.append(" dtn: ").append(declaredTypeName);
                     for (var ta : dt.getTypeArguments()) {
-                        msg += " ;" + ta;
+                        msg.append(" ;").append(ta);
                     }
+                } else {
+                    msg.append("; ").append(rcte.toString()).append(" [").append(rcte.getClass().toString()).append(" ]");
                 }
             }
 
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,msg);
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, msg.toString());
         }
     }
 }
