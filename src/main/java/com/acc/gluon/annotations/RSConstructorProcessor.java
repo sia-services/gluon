@@ -111,7 +111,12 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
         int[] localIndex = new int[] { rsIndex };
 
-        printClass(pw, packagename + PACKAGE_SUFFIX, typename + IMPL_CLASS_SUFFIX, IMPORTS, () -> {
+        var imports = new ArrayList<String>() {{
+            addAll(IMPORTS);
+            add(packagename);
+        }};
+
+        printClass(pw, packagename + PACKAGE_SUFFIX, typename + IMPL_CLASS_SUFFIX, imports, () -> {
 
             boolean firstRecord = true;
             // print function header
@@ -151,7 +156,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
                     localIndex[0]++;
                 }
             }
-            functionBody.append("\n            );");
+            functionBody.append("\n          );");
             printMethod(pw, "construct", typename, true, true, arguments, List.of("SQLException"), functionBody);
 
         });
