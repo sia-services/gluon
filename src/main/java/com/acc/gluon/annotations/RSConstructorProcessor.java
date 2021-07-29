@@ -77,7 +77,10 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
             StringBuilder componentType = processRecordComponent(rsIndex, rcType, provided, join, recursiveElements);
 
-            String indexRepr = (!join && provided == null)? String.valueOf(rsIndex) : " ";
+            if (provided != null && provided.value() == Source.ResultSet) {
+                rsIndex ++;
+            }
+            String indexRepr = (!join && provided == null)? String.valueOf(rsIndex) : "-";
 
             StringBuilder msg = new StringBuilder("  " + indexRepr + ": " + componentType + " " + rcName);
             if (provided != null) {
@@ -91,7 +94,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
             processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, msg.toString());
 
-            if (!join && (provided == null || provided.value() == Source.Code)) {
+            if (!join && provided == null) {
                 rsIndex ++;
             }
         }
