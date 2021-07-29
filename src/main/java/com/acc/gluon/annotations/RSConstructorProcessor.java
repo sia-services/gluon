@@ -4,10 +4,7 @@ import com.google.auto.service.AutoService;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.PackageElement;
+import javax.lang.model.element.*;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
@@ -18,17 +15,26 @@ import javax.tools.JavaFileObject;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @AutoService(Processor.class)
 @SupportedAnnotationTypes("com.acc.gluon.annotations.ResultSetConstructor")
 @SupportedSourceVersion(SourceVersion.RELEASE_16)
 public class RSConstructorProcessor extends AbstractProcessor {
 
+    private static final Set<TypeKind> PRIMITIVE_TYPES = Set.of(TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG, TypeKind.DOUBLE);
+    private final Set<Name> DECLARED_TYPES;
+
     /** public for ServiceLoader */
-    public RSConstructorProcessor() {}
+    public RSConstructorProcessor() {
+        var utils = processingEnv.getElementUtils();
+        DECLARED_TYPES =  Stream.of(String.class, Integer.class, Long.class, BigDecimal.class).map(c -> utils.getName(c.getName())).collect(Collectors.toUnmodifiableSet());
+    }
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -67,15 +73,13 @@ public class RSConstructorProcessor extends AbstractProcessor {
             var provided = rc.getAnnotation(ResultSetConstructor.Provided.class);
             var join = rc.getAnnotation(ResultSetConstructor.Join.class) != null;
 
-            var typeKind = rcType.getKind();
-
-            StringBuilder componentType = processRecordComponent(recursiveElements, rcType, typeKind, provided, join);
+            StringBuilder componentType = processRecordComponent(recursiveElements, rcType, provided, join);
 
             if (provided != null && provided.value() == Source.ResultSet) {
                 rsIndex += 1;
             }
 
-            StringBuilder msg = new StringBuilder("  " + rsIndex + ": " + componentType + " " + rcName + " [" + typeKind.name() + "]");
+            StringBuilder msg = new StringBuilder("  " + rsIndex + ": " + componentType + " " + rcName);
             if (provided != null) {
                 msg.append(" PRV");
                 if (join) {
@@ -99,7 +103,8 @@ public class RSConstructorProcessor extends AbstractProcessor {
         return rsIndex;
     }
 
-    private StringBuilder processRecordComponent(List<Element> recursiveElements, TypeMirror rcType, TypeKind typeKind, ResultSetConstructor.Provided provided, boolean join) {
+    private StringBuilder processRecordComponent(List<Element> recursiveElements, TypeMirror rcType, ResultSetConstructor.Provided provided, boolean join) {
+        var typeKind = rcType.getKind();
         StringBuilder componentType = new StringBuilder();
 
         if (typeKind == TypeKind.DECLARED) {
@@ -127,10 +132,11 @@ public class RSConstructorProcessor extends AbstractProcessor {
                         } else {
                             componentType.append("{").append(rcte.getKind()).append("}");
                         }
+
                     }
                     componentType.append(" >");
                 } else {
-                    if (!(simpleTypeName.contentEquals("BigDecimal") && simpleTypeName.contentEquals("String") && simpleTypeName.contentEquals("Integer") && simpleTypeName.contentEquals("Long"))) {
+                    if (!DECLARED_TYPES.contains(simpleTypeName)) {
                         processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Not supported type: " + simpleTypeName);
                     }
                 }
@@ -143,12 +149,15 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 componentType.append(arrayType.toString());
 
                 if (arrayType.getKind() != TypeKind.BYTE) {
-                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Not supported type for array: " + arrayType.toString() + "; must be only BYTE");
+                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Not supported type for array: " + arrayType.toString() + "; must be only byte");
                 }
 
                 componentType.append(" ]");
             }
         } else {
+            if (!PRIMITIVE_TYPES.contains(typeKind)) {
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Not supported primitive type, valid types are: int, long, boolean, double");
+            }
             // TODO: only TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG TypeKind.DOUBLE
             componentType.append(rcType);
         }
