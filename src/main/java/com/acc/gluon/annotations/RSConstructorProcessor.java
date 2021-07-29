@@ -48,8 +48,6 @@ public class RSConstructorProcessor extends AbstractProcessor {
         String packagename = pe.getQualifiedName().toString();
         String typeName = te.getSimpleName().toString();
 
-
-
         processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Record: " + packagename + "." + typeName);
 
         for (var rc : te.getRecordComponents()) {
@@ -61,35 +59,32 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
             var typeKind = rcType.getKind();
 
-            StringBuilder msg = new StringBuilder(";    " + rcType + " " + rcName + " [" + typeKind.name() + "]");
+            StringBuilder componentType = new StringBuilder();
+
+            if (typeKind == TypeKind.DECLARED) {
+                // var rcte = processingEnv.getTypeUtils().asElement(rcType);
+
+                if (rcType instanceof DeclaredType dt) {
+                    componentType.append(dt.asElement().getSimpleName());
+                    var typeArguments = dt.getTypeArguments();
+                    if (typeArguments.size() > 0) {
+                        componentType.append("< ");
+                        for (var ta : dt.getTypeArguments()) {
+                            // TODO: recursively analize; temporary create new HashSet<>() for Set && new ArrayList<>() for List
+                            componentType.append(" ;").append(ta);
+                        }
+                        componentType.append(" >");
+                    }
+                }
+            } else {
+                componentType.append(rcType);
+            }
+
+            StringBuilder msg = new StringBuilder(";    " + componentType + " " + rcName + " [" + typeKind.name() + "]");
             if (provided) {
                 msg.append(" PRV");
             }else if (join) {
                 msg.append(" JOIN");
-            }
-
-            if (typeKind == TypeKind.DECLARED) {
-                var rcte = processingEnv.getTypeUtils().asElement(rcType);
-
-                if (rcType instanceof DeclaredType dt) {
-                    msg.append(" ; dt [DeclaredType]: ").append(dt.asElement().getSimpleName());
-                    for (var ta : dt.getTypeArguments()) {
-                        msg.append(" ;").append(ta);
-                    }
-                }
-
-                // TODO: not working
-                if (rcte instanceof DeclaredType dt) {
-                    var declaredTypeName = dt.asElement().getSimpleName();
-                    msg.append(" dtn: ").append(declaredTypeName);
-                    for (var ta : dt.getTypeArguments()) {
-                        msg.append(" ;").append(ta);
-                    }
-                } else if (rcte instanceof TypeElement compomentte) {
-                    msg.append(" ; te: ").append(compomentte.getSimpleName());
-                } else {
-                    msg.append("; ").append(rcte.toString()).append(" [").append(rcte.getClass().toString()).append(" ]");
-                }
             }
 
             processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, msg.toString());

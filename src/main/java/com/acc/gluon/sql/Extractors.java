@@ -19,10 +19,6 @@ public class Extractors {
         return rs.wasNull()? null : v;
     }
 
-    public static boolean getBoolean(ResultSet rs, int index) throws SQLException {
-        return rs.getInt(index) == 1;
-    }
-
     public static Integer getNullableInt(ResultSet rs) throws SQLException {
         return getNullableInt(rs, 1);
     }
@@ -37,6 +33,14 @@ public class Extractors {
 
     public static long getLong(ResultSet rs) throws SQLException {
         return rs.getLong(1);
+    }
+
+    public static boolean getBoolean(ResultSet rs, int index) throws SQLException {
+        return rs.getInt(index) == 1;
+    }
+
+    public static boolean getBoolean(ResultSet rs) throws SQLException {
+        return getBoolean(rs, 1);
     }
 
     public static byte[] getBlob(ResultSet rs, int index) throws SQLException, IOException {
