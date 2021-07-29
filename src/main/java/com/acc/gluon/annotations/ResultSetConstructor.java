@@ -14,11 +14,14 @@ public @interface ResultSetConstructor {
 
     /**
      * If present, do not include this field in the ResultSet extractor,
-     * but provide this field in constructor parameter as is
+     * but provide this field in constructor parameter as is.
+     * If source is ResultSet; constructor will shift rs index
      */
     @Target({ElementType.FIELD, ElementType.METHOD, ElementType.RECORD_COMPONENT})
     @Retention(RetentionPolicy.SOURCE)
-    @interface Provided {}
+    @interface Provided {
+        Source value() default Source.ResultSet;
+    }
 
     /**
      * Join Entities (with recursive generation of rs constructor).

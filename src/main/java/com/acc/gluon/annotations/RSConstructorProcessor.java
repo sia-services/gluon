@@ -32,35 +32,30 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        boolean ret = true;
         for (var e : roundEnv.getElementsAnnotatedWith(ResultSetConstructor.class)) {
             if (e.getKind() == ElementKind.RECORD) {
-                var processResult = processRecord(e);
-                ret = ret && processResult;
+                processRecord(e, 1);
             } else {
                 processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,"Element kind: " + e.getKind().name() + " is not a RECORD");
             }
         }
-        return ret;
+        return true;
     }
 
-    private boolean processRecord(Element e) {
+    private int processRecord(Element e, int rsIndex) {
         var enclosingElement = e.getEnclosingElement();
 
         if (e instanceof TypeElement te && enclosingElement instanceof PackageElement pe) {
-            return generateImplementation(pe, te);
+            String packagename = pe.getQualifiedName().toString();
+            return generateImplementation(packagename, te, rsIndex);
         } else {
             processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Element: " + e.getSimpleName() + "; kind: " + e.getKind().name() + "; enclosing element: " + enclosingElement.getClass());
-            return false;
+            return 0;
         }
     }
 
-    private boolean generateImplementation(PackageElement pe, TypeElement te) {
-        boolean ret = true;
-
-        String packagename = pe.getQualifiedName().toString();
+    private int generateImplementation(String packagename, TypeElement te, int rsIndex) {
         String typeName = te.getSimpleName().toString();
-
         List<Element> recursiveElements = new ArrayList<>();
 
         processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Record: " + packagename + "." + typeName);
@@ -69,65 +64,94 @@ public class RSConstructorProcessor extends AbstractProcessor {
             var rcName = rc.getSimpleName();
             TypeMirror rcType = rc.asType();
 
-            var provided = rc.getAnnotation(ResultSetConstructor.Provided.class) != null;
+            var provided = rc.getAnnotation(ResultSetConstructor.Provided.class);
             var join = rc.getAnnotation(ResultSetConstructor.Join.class) != null;
 
             var typeKind = rcType.getKind();
 
-            StringBuilder componentType = new StringBuilder();
+            StringBuilder componentType = processRecordComponent(recursiveElements, rcType, typeKind, provided, join);
 
-            if (typeKind == TypeKind.DECLARED) {
-                if (rcType instanceof DeclaredType dt) {
-                    componentType.append(dt.asElement().getSimpleName());
-
-                    // TODO: only Set, List, BigDecimal, String, Integer, Long
-
-                    var typeArguments = dt.getTypeArguments();
-                    if (typeArguments.size() > 0) {
-                        componentType.append("< ");
-                        for (var ta : dt.getTypeArguments()) {
-                            // TODO: recursively analize; temporary create new HashSet<>() for Set && new ArrayList<>() for List
-                            componentType.append(ta);
-                            var rcte = processingEnv.getTypeUtils().asElement(ta);
-                            if (rcte.getKind() == ElementKind.RECORD) {
-                                recursiveElements.add(rcte);
-                            } else {
-                                componentType.append("{").append(rcte.getKind()).append("}");
-                            }
-                        }
-                        componentType.append(" >");
-                    }
-                }
-            } else if (typeKind == TypeKind.ARRAY) {
-                if (rcType instanceof ArrayType at) {
-                    componentType.append("array[ ");
-
-                    // TODO: array type must be only byte (TypeKind.BYTE)
-                    var arrayType = at.getComponentType();
-                    componentType.append(arrayType.toString());
-
-                    componentType.append(" ]");
-                }
-            } else {
-                // TODO: only TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG TypeKind.DOUBLE
-                componentType.append(rcType);
+            if (provided != null && provided.value() == Source.ResultSet) {
+                rsIndex += 1;
             }
 
-            StringBuilder msg = new StringBuilder(";    " + componentType + " " + rcName + " [" + typeKind.name() + "]");
-            if (provided) {
+            StringBuilder msg = new StringBuilder("  " + rsIndex + ": " + componentType + " " + rcName + " [" + typeKind.name() + "]");
+            if (provided != null) {
                 msg.append(" PRV");
-            }else if (join) {
+                if (join) {
+                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,packagename + "." + typeName + "." + rcName + " can be either @Provided or @Join");
+                }
+            } else if (join) {
                 msg.append(" JOIN");
             }
 
             processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, msg.toString());
+
+            if (!join && (provided == null || provided.value() == Source.Code)) {
+                rsIndex ++;
+            }
         }
 
         for (var recursiveElement : recursiveElements) {
-            var processResult = processRecord(recursiveElement);
-            ret = ret && processResult;
+            rsIndex += processRecord(recursiveElement, rsIndex);
         }
 
-        return ret;
+        return rsIndex;
+    }
+
+    private StringBuilder processRecordComponent(List<Element> recursiveElements, TypeMirror rcType, TypeKind typeKind, ResultSetConstructor.Provided provided, boolean join) {
+        StringBuilder componentType = new StringBuilder();
+
+        if (typeKind == TypeKind.DECLARED) {
+            if (rcType instanceof DeclaredType dt) {
+                var simpleTypeName = dt.asElement().getSimpleName();
+                componentType.append(simpleTypeName);
+
+                // TODO: only Set, List, BigDecimal, String, Integer, Long
+
+                var typeArguments = dt.getTypeArguments();
+                if (typeArguments.size() > 0) {
+                    if (!join) {
+                        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Recursive type must be annotated with @Join");
+                    }
+                    if (!(simpleTypeName.contentEquals("Set") || simpleTypeName.contentEquals("List"))) {
+                        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Recursive type must must be enclosed either Set or List");
+                    }
+                    componentType.append("< ");
+                    for (var ta : dt.getTypeArguments()) {
+                        // TODO: recursively analize; temporary create new HashSet<>() for Set && new ArrayList<>() for List
+                        componentType.append(ta);
+                        var rcte = processingEnv.getTypeUtils().asElement(ta);
+                        if (rcte.getKind() == ElementKind.RECORD) {
+                            recursiveElements.add(rcte);
+                        } else {
+                            componentType.append("{").append(rcte.getKind()).append("}");
+                        }
+                    }
+                    componentType.append(" >");
+                } else {
+                    if (!(simpleTypeName.contentEquals("BigDecimal") && simpleTypeName.contentEquals("String") && simpleTypeName.contentEquals("Integer") && simpleTypeName.contentEquals("Long"))) {
+                        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Not supported type: " + simpleTypeName);
+                    }
+                }
+            }
+        } else if (typeKind == TypeKind.ARRAY) {
+            if (rcType instanceof ArrayType at) {
+                componentType.append("array[ ");
+
+                var arrayType = at.getComponentType();
+                componentType.append(arrayType.toString());
+
+                if (arrayType.getKind() != TypeKind.BYTE) {
+                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Not supported type for array: " + arrayType.toString() + "; must be only BYTE");
+                }
+
+                componentType.append(" ]");
+            }
+        } else {
+            // TODO: only TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG TypeKind.DOUBLE
+            componentType.append(rcType);
+        }
+        return componentType;
     }
 }
