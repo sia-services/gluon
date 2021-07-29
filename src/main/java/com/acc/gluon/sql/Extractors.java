@@ -23,6 +23,22 @@ public class Extractors {
         return rs.getInt(index) == 1;
     }
 
+    public static Integer getNullableInt(ResultSet rs) throws SQLException {
+        return getNullableInt(rs, 1);
+    }
+
+    public static Long getNullableLong(ResultSet rs) throws SQLException {
+        return getNullableLong(rs, 1);
+    }
+
+    public static int getInt(ResultSet rs) throws SQLException {
+        return rs.getInt(1);
+    }
+
+    public static long getLong(ResultSet rs) throws SQLException {
+        return rs.getLong(1);
+    }
+
     public static byte[] getBlob(ResultSet rs, int index) throws SQLException, IOException {
         return getBlob(rs, index, stream -> {
             try {
