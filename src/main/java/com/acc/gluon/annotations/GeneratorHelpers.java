@@ -42,7 +42,7 @@ public class GeneratorHelpers {
                 .append(") ");
 
         if (exceptions.size() > 0) {
-            header.append("throws ").append(String.join(" ", exceptions));
+            header.append("throws ").append(String.join(", ", exceptions)).append(" ");
         }
 
         // finalize function header
