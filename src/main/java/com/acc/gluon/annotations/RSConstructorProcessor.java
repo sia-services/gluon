@@ -70,6 +70,14 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
             if (typeKind == TypeKind.DECLARED) {
                 var rcte = processingEnv.getTypeUtils().asElement(rcType);
+
+                if (rcType instanceof DeclaredType dt) {
+                    msg.append(" ; dt [DeclaredType]: ").append(dt.asElement().getSimpleName());
+                    for (var ta : dt.getTypeArguments()) {
+                        msg.append(" ;").append(ta);
+                    }
+                }
+
                 // TODO: not working
                 if (rcte instanceof DeclaredType dt) {
                     var declaredTypeName = dt.asElement().getSimpleName();
@@ -77,6 +85,8 @@ public class RSConstructorProcessor extends AbstractProcessor {
                     for (var ta : dt.getTypeArguments()) {
                         msg.append(" ;").append(ta);
                     }
+                } else if (rcte instanceof TypeElement compomentte) {
+                    msg.append(" ; te: ").append(compomentte.getSimpleName());
                 } else {
                     msg.append("; ").append(rcte.toString()).append(" [").append(rcte.getClass().toString()).append(" ]");
                 }
