@@ -9,13 +9,14 @@ import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -52,7 +53,9 @@ public class RSConstructorProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         if (DECLARED_TYPES == null) {
-            DECLARED_TYPES = Stream.of(String.class, Integer.class, Long.class, BigDecimal.class).map(Class::getSimpleName).collect(Collectors.toUnmodifiableSet());
+            DECLARED_TYPES = Stream.of(
+                    String.class, Integer.class, Long.class, BigDecimal.class, Timestamp.class, Date.class
+            ).map(Class::getSimpleName).collect(Collectors.toUnmodifiableSet());
         }
 
         for (var e : roundEnv.getElementsAnnotatedWith(ResultSetConstructor.class)) {
@@ -179,80 +182,96 @@ public class RSConstructorProcessor extends AbstractProcessor {
         StringBuilder expression = new StringBuilder();
 
         if (typeKind == TypeKind.DECLARED) {
-            if (rcType instanceof DeclaredType dt) {
-                var simpleTypeName = dt.asElement().getSimpleName();
-
-                // only Set, List, BigDecimal, String, Integer, Long
-
-                var typeArguments = dt.getTypeArguments();
-                if (typeArguments.size() > 0) {
-                    if (!join) {
-                        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Recursive type must be annotated with @Join");
-                    }
-                    if (!(simpleTypeName.contentEquals("Set") || simpleTypeName.contentEquals("List"))) {
-                        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Recursive type must must be enclosed either Set or List");
-                    }
-
-                    // create new HashSet<>() for Set && new ArrayList<>() for List
-                    expression.append("new java.util.");
-                    if (simpleTypeName.contentEquals("Set")) {
-                        expression.append("HashSet");
-                    } else {
-                        expression.append("ArrayList");
-                    }
-                    expression.append("<>()");
-
-                    // recursively analize subtypes
-                    for (var ta : dt.getTypeArguments()) {
-                        var rcte = processingEnv.getTypeUtils().asElement(ta);
-                        if (rcte.getKind() == ElementKind.RECORD) {
-                            recursiveElements.add(rcte);
-                        } else {
-                            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Recursive type must must be only records");
-                        }
-                    }
-                } else {
-                    var typename = simpleTypeName.toString();
-                    if (!DECLARED_TYPES.contains(typename)) {
-                        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Not supported type: " + simpleTypeName);
-                    }
-                    switch (typename) {
-                        case "Integer" -> {
-                            expression.append(INTEGER_EXTRACTOR).append(rsIndex).append(")");
-                        }
-                        case "Long" -> {
-                            expression.append(LONG_EXTRACTOR).append(rsIndex).append(")");
-                        }
-                        default -> {
-                            expression.append("rs.get").append(typename).append("(").append(rsIndex).append(")");
-                        }
-                    }
-                    ;
-                }
-            }
+            processDeclaredType(rsIndex, rcType, join, recursiveElements, expression);
         } else if (typeKind == TypeKind.ARRAY) {
-            if (rcType instanceof ArrayType at) {
-                var arrayType = at.getComponentType();
-
-                if (arrayType.getKind() != TypeKind.BYTE) {
-                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Not supported type for array: " + arrayType + "; must be only byte");
-                }
-
-                expression.append(BLOB_EXTRACTOR).append(rsIndex).append(")");
-                needIOException[0] = true;
-            }
+            processArrayType(rsIndex, rcType, needIOException, expression);
         } else {
-            // only TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG TypeKind.DOUBLE
-            if (!PRIMITIVE_TYPES.contains(typeKind)) {
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Not supported primitive type, valid types are: int, long, boolean, double");
-            }
-            if (typeKind == TypeKind.BOOLEAN) {
-                expression.append(BOOLEAN_EXTRACTOR);
-            } else {
-                expression.append("rs.get").append(capitalize(rcType.toString())).append("(");
-            }
-            expression.append(rsIndex).append(")");
+            processPrimitiveType(rsIndex, rcType, typeKind, expression);
         }
         return expression;
+    }
+
+    private void processDeclaredType(int rsIndex, TypeMirror rcType, boolean join, List<Element> recursiveElements, StringBuilder expression) {
+        if (rcType instanceof DeclaredType dt) {
+            var simpleTypeName = dt.asElement().getSimpleName();
+
+            // only Set, List, BigDecimal, String, Integer, Long, java.sql.Date, java.sql.Timestamp
+
+            var typeArguments = dt.getTypeArguments();
+            if (typeArguments.size() > 0) {
+                processGenericType(join, recursiveElements, expression, dt, simpleTypeName);
+            } else {
+                var typename = simpleTypeName.toString();
+                if (!DECLARED_TYPES.contains(typename)) {
+                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Not supported type: " + simpleTypeName);
+                }
+                switch (typename) {
+                    case "Integer" -> {
+                        expression.append(INTEGER_EXTRACTOR).append(rsIndex).append(")");
+                    }
+                    case "Long" -> {
+                        expression.append(LONG_EXTRACTOR).append(rsIndex).append(")");
+                    }
+                    default -> {
+                        expression.append("rs.get").append(typename).append("(").append(rsIndex).append(")");
+                    }
+                }
+                ;
+            }
+        }
+    }
+
+    private void processGenericType(boolean join, List<Element> recursiveElements, StringBuilder expression, DeclaredType dt, Name simpleTypeName) {
+        if (!join) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Recursive type must be annotated with @Join");
+        }
+        if (!(simpleTypeName.contentEquals("Set") || simpleTypeName.contentEquals("List"))) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Recursive type must must be enclosed either Set or List");
+        }
+
+        // create new HashSet<>() for Set && new ArrayList<>() for List
+        expression.append("new java.util.");
+        if (simpleTypeName.contentEquals("Set")) {
+            expression.append("HashSet");
+        } else {
+            expression.append("ArrayList");
+        }
+        expression.append("<>()");
+
+        // recursively analize subtypes
+        for (var ta : dt.getTypeArguments()) {
+            var rcte = processingEnv.getTypeUtils().asElement(ta);
+            if (rcte.getKind() == ElementKind.RECORD) {
+                recursiveElements.add(rcte);
+            } else {
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Recursive type must must be only records");
+            }
+        }
+    }
+
+    private void processArrayType(int rsIndex, TypeMirror rcType, boolean[] needIOException, StringBuilder expression) {
+        if (rcType instanceof ArrayType at) {
+            var arrayType = at.getComponentType();
+
+            if (arrayType.getKind() != TypeKind.BYTE) {
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Not supported type for array: " + arrayType + "; must be only byte");
+            }
+
+            expression.append(BLOB_EXTRACTOR).append(rsIndex).append(")");
+            needIOException[0] = true;
+        }
+    }
+
+    private void processPrimitiveType(int rsIndex, TypeMirror rcType, TypeKind typeKind, StringBuilder expression) {
+        // only TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG TypeKind.DOUBLE
+        if (!PRIMITIVE_TYPES.contains(typeKind)) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Not supported primitive type, valid types are: int, long, boolean, double");
+        }
+        if (typeKind == TypeKind.BOOLEAN) {
+            expression.append(BOOLEAN_EXTRACTOR);
+        } else {
+            expression.append("rs.get").append(capitalize(rcType.toString())).append("(");
+        }
+        expression.append(rsIndex).append(")");
     }
 }
