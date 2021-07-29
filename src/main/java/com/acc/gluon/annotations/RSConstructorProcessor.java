@@ -113,7 +113,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
 
         var imports = new ArrayList<String>() {{
             addAll(IMPORTS);
-            add(packagename);
+            add(fqcn);
         }};
 
         printClass(pw, packagename + PACKAGE_SUFFIX, typename + IMPL_CLASS_SUFFIX, imports, () -> {
@@ -141,7 +141,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 } else {
                     functionBody.append(",");
                 }
-                functionBody.append("\n          ");
+                functionBody.append("\n            ");
                 if (provided != null) {
                     functionBody.append(rcName);
                 } else {
@@ -156,7 +156,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
                     localIndex[0]++;
                 }
             }
-            functionBody.append("\n          );");
+            functionBody.append("\n        );");
             printMethod(pw, "construct", typename, true, true, arguments, List.of("SQLException"), functionBody);
 
         });

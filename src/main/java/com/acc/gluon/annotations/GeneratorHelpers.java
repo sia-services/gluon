@@ -38,7 +38,7 @@ public class GeneratorHelpers {
         header
                 .append(retType).append(" ")
                 .append(name).append("(")
-                .append(String.join(",", arguments))
+                .append(String.join(", ", arguments))
                 .append(") ");
 
         if (exceptions.size() > 0) {
