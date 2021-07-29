@@ -8,6 +8,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.PackageElement;
+import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
@@ -76,10 +77,11 @@ public class RSConstructorProcessor extends AbstractProcessor {
             StringBuilder componentType = new StringBuilder();
 
             if (typeKind == TypeKind.DECLARED) {
-                // var rcte = processingEnv.getTypeUtils().asElement(rcType);
-
                 if (rcType instanceof DeclaredType dt) {
                     componentType.append(dt.asElement().getSimpleName());
+
+                    // TODO: only Set, List, BigDecimal, String, Integer, Long
+
                     var typeArguments = dt.getTypeArguments();
                     if (typeArguments.size() > 0) {
                         componentType.append("< ");
@@ -96,7 +98,18 @@ public class RSConstructorProcessor extends AbstractProcessor {
                         componentType.append(" >");
                     }
                 }
+            } else if (typeKind == TypeKind.ARRAY) {
+                if (rcType instanceof ArrayType at) {
+                    componentType.append("array[ ");
+
+                    // TODO: array type must be only byte (TypeKind.BYTE)
+                    var arrayType = at.getComponentType();
+                    componentType.append(arrayType.toString());
+
+                    componentType.append(" ]");
+                }
             } else {
+                // TODO: only TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG TypeKind.DOUBLE
                 componentType.append(rcType);
             }
 
