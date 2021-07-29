@@ -30,21 +30,23 @@ public class RSConstructorProcessor extends AbstractProcessor {
     private static final Set<TypeKind> PRIMITIVE_TYPES = Set.of(TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG, TypeKind.DOUBLE);
     private Set<String> DECLARED_TYPES = null;
 
-    /** public for ServiceLoader */
+    /**
+     * public for ServiceLoader
+     */
     public RSConstructorProcessor() {
     }
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         if (DECLARED_TYPES == null) {
-            DECLARED_TYPES =  Stream.of(String.class, Integer.class, Long.class, BigDecimal.class).map(Class::getSimpleName).collect(Collectors.toUnmodifiableSet());
+            DECLARED_TYPES = Stream.of(String.class, Integer.class, Long.class, BigDecimal.class).map(Class::getSimpleName).collect(Collectors.toUnmodifiableSet());
         }
 
         for (var e : roundEnv.getElementsAnnotatedWith(ResultSetConstructor.class)) {
             if (e.getKind() == ElementKind.RECORD) {
                 processRecord(e, 1);
             } else {
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING,"Element kind: " + e.getKind().name() + " is not a RECORD");
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, "Element kind: " + e.getKind().name() + " is not a RECORD");
             }
         }
         return true;
@@ -54,19 +56,53 @@ public class RSConstructorProcessor extends AbstractProcessor {
         var enclosingElement = e.getEnclosingElement();
 
         if (e instanceof TypeElement te && enclosingElement instanceof PackageElement pe) {
-            String packagename = pe.getQualifiedName().toString();
-            return generateImplementation(packagename, te, rsIndex);
+            String packagename = pe.getQualifiedName().toString() + ".impl";
+            return processRecord(packagename, te, rsIndex);
         } else {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Element: " + e.getSimpleName() + "; kind: " + e.getKind().name() + "; enclosing element: " + enclosingElement.getClass());
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Element: " + e.getSimpleName() + "; kind: " + e.getKind().name() + "; enclosing element: " + enclosingElement.getClass());
             return 0;
         }
     }
 
-    private int generateImplementation(String packagename, TypeElement te, int rsIndex) {
-        String typeName = te.getSimpleName().toString();
+    private int processRecord(String packagename, TypeElement te, int rsIndex) {
         List<Element> recursiveElements = new ArrayList<>();
 
-        processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE,"Record: " + packagename + "." + typeName);
+        String typename = te.getSimpleName().toString() + "Constructor";
+
+        try {
+            JavaFileObject f = processingEnv
+                    .getFiler()
+                    .createSourceFile(packagename + "." + typename);
+
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "Creating to " + f.toUri());
+
+            Writer w = f.openWriter();
+            try {
+                PrintWriter pw = new PrintWriter(w);
+                rsIndex = generateImplementation(pw, packagename, typename, te, rsIndex, recursiveElements);
+                pw.flush();
+            } finally {
+                w.close();
+            }
+        } catch (IOException x) {
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                    x.toString());
+        }
+
+        for (var recursiveElement : recursiveElements) {
+            rsIndex += processRecord(recursiveElement, rsIndex);
+        }
+
+        return rsIndex;
+    }
+
+    private int generateImplementation(PrintWriter pw, String packagename, String typename, TypeElement te, int rsIndex, List<Element> recursiveElements) {
+        generateHeader(pw, packagename, typename);
+
+        // print function header
+        pw.print("    public static " + typename + " construct(ResultSet rs");
+
+        StringBuilder functionBody = new StringBuilder();
 
         for (var rc : te.getRecordComponents()) {
             var rcName = rc.getSimpleName();
@@ -75,18 +111,25 @@ public class RSConstructorProcessor extends AbstractProcessor {
             var provided = rc.getAnnotation(ResultSetConstructor.Provided.class);
             var join = rc.getAnnotation(ResultSetConstructor.Join.class) != null;
 
+            if (provided != null) {
+                pw.println(", ");
+                pw.print(rcType.toString());
+                pw.print(" ");
+                pw.print(rcName);
+            }
+
             StringBuilder componentType = processRecordComponent(rsIndex, rcType, provided, join, recursiveElements);
 
             if (provided != null && provided.value() == Source.ResultSet) {
-                rsIndex ++;
+                rsIndex++;
             }
-            String indexRepr = (!join && provided == null)? String.valueOf(rsIndex) : "-";
+            String indexRepr = (!join && provided == null) ? String.valueOf(rsIndex) : "-";
 
             StringBuilder msg = new StringBuilder("  " + indexRepr + ": " + componentType + " " + rcName);
             if (provided != null) {
                 msg.append(" PRV");
                 if (join) {
-                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,packagename + "." + typeName + "." + rcName + " can be either @Provided or @Join");
+                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, rcName + " can be either @Provided or @Join");
                 }
             } else if (join) {
                 msg.append(" JOIN");
@@ -95,15 +138,32 @@ public class RSConstructorProcessor extends AbstractProcessor {
             processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, msg.toString());
 
             if (!join && provided == null) {
-                rsIndex ++;
+                rsIndex++;
             }
         }
 
-        for (var recursiveElement : recursiveElements) {
-            rsIndex += processRecord(recursiveElement, rsIndex);
-        }
+        // finalize function header
+        pw.println(") {");
+        // function body
+        pw.println(functionBody);
+        // finalize function
+        pw.println("    }");
+
+        generateFooter(pw);
 
         return rsIndex;
+    }
+
+    private void generateHeader(PrintWriter pw, String packagename, String typename) {
+        pw.println("package " + packagename + ";");
+        pw.println();
+        pw.println("public class " + typename + " {");
+        pw.println();
+    }
+
+    private void generateFooter(PrintWriter pw) {
+        pw.println();
+        pw.println("}");
     }
 
     private StringBuilder processRecordComponent(int rsIndex, TypeMirror rcType, ResultSetConstructor.Provided provided, boolean join, List<Element> recursiveElements) {
@@ -120,10 +180,10 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 var typeArguments = dt.getTypeArguments();
                 if (typeArguments.size() > 0) {
                     if (!join) {
-                        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Recursive type must be annotated with @Join");
+                        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Recursive type must be annotated with @Join");
                     }
                     if (!(simpleTypeName.contentEquals("Set") || simpleTypeName.contentEquals("List"))) {
-                        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Recursive type must must be enclosed either Set or List");
+                        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Recursive type must must be enclosed either Set or List");
                     }
                     componentType.append("< ");
                     for (var ta : dt.getTypeArguments()) {
@@ -140,7 +200,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
                     componentType.append(" >");
                 } else {
                     if (!DECLARED_TYPES.contains(simpleTypeName.toString())) {
-                        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Not supported type: " + simpleTypeName);
+                        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Not supported type: " + simpleTypeName);
                     }
                 }
             }
@@ -152,14 +212,14 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 componentType.append(arrayType.toString());
 
                 if (arrayType.getKind() != TypeKind.BYTE) {
-                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Not supported type for array: " + arrayType.toString() + "; must be only byte");
+                    processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Not supported type for array: " + arrayType.toString() + "; must be only byte");
                 }
 
                 componentType.append(" ]");
             }
         } else {
             if (!PRIMITIVE_TYPES.contains(typeKind)) {
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Not supported primitive type, valid types are: int, long, boolean, double");
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Not supported primitive type, valid types are: int, long, boolean, double");
             }
             // TODO: only TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG TypeKind.DOUBLE
             componentType.append(rcType);
