@@ -89,6 +89,8 @@ public class RSConstructorProcessor extends AbstractProcessor {
                             var rcte = processingEnv.getTypeUtils().asElement(rcType);
                             if (rcte.getKind() == ElementKind.RECORD) {
                                 recursiveElements.add(rcte);
+                            } else {
+                                componentType.append("{").append(rcte.getKind()).append("}");
                             }
                         }
                         componentType.append(" >");
