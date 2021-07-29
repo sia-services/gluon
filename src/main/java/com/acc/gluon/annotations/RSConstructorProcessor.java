@@ -64,7 +64,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
         var enclosingElement = e.getEnclosingElement();
 
         if (e instanceof TypeElement te && enclosingElement instanceof PackageElement pe) {
-            String packagename = pe.getQualifiedName().toString() + ".impl";
+            String packagename = pe.getQualifiedName().toString();
             return processRecord(packagename, te, rsIndex);
         } else {
             processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "Element: " + e.getSimpleName() + "; kind: " + e.getKind().name() + "; enclosing element: " + enclosingElement.getClass());
@@ -75,7 +75,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
     private int processRecord(String packagename, TypeElement te, int rsIndex) {
         List<Element> recursiveElements = new ArrayList<>();
 
-        String typename = te.getSimpleName().toString() + "Constructor";
+        String typename = te.getSimpleName().toString();
 
         try {
             JavaFileObject f = processingEnv
@@ -112,7 +112,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
             boolean firstRecord = true;
             // print function header
             ArrayList<String> arguments = new ArrayList<>();
-            StringBuilder functionBody = new StringBuilder("    return new " + fqcn + "(\n");
+            StringBuilder functionBody = new StringBuilder("    return new " + fqcn + "(");
 
             arguments.add("java.sql.ResultSet rs");
 
@@ -132,7 +132,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
                 } else {
                     functionBody.append(",");
                 }
-                functionBody.append("      ");
+                functionBody.append("\n      ");
                 if (provided != null) {
                     functionBody.append(rcName);
                 } else {

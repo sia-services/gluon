@@ -40,7 +40,7 @@ public class GeneratorHelpers {
         writer.print(header);
 
         // finalize function header
-        writer.println(") {");
+        writer.println(" {");
         // function body
         writer.println(body);
         // finalize function
