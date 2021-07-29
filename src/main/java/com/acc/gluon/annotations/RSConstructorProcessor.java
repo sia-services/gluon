@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 public class RSConstructorProcessor extends AbstractProcessor {
 
     private static final Set<TypeKind> PRIMITIVE_TYPES = Set.of(TypeKind.BOOLEAN, TypeKind.INT, TypeKind.LONG, TypeKind.DOUBLE);
-    private Set<Name> DECLARED_TYPES = null;
+    private Set<String> DECLARED_TYPES = null;
 
     /** public for ServiceLoader */
     public RSConstructorProcessor() {
@@ -37,8 +37,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         if (DECLARED_TYPES == null) {
-            var utils = processingEnv.getElementUtils();
-            DECLARED_TYPES =  Stream.of(String.class, Integer.class, Long.class, BigDecimal.class).map(c -> utils.getName(c.getName())).collect(Collectors.toUnmodifiableSet());
+            DECLARED_TYPES =  Stream.of(String.class, Integer.class, Long.class, BigDecimal.class).map(Class::getSimpleName).collect(Collectors.toUnmodifiableSet());
         }
 
         for (var e : roundEnv.getElementsAnnotatedWith(ResultSetConstructor.class)) {
@@ -76,13 +75,11 @@ public class RSConstructorProcessor extends AbstractProcessor {
             var provided = rc.getAnnotation(ResultSetConstructor.Provided.class);
             var join = rc.getAnnotation(ResultSetConstructor.Join.class) != null;
 
-            StringBuilder componentType = processRecordComponent(recursiveElements, rcType, provided, join);
+            StringBuilder componentType = processRecordComponent(rsIndex, rcType, provided, join, recursiveElements);
 
-            if (provided != null && provided.value() == Source.ResultSet) {
-                rsIndex += 1;
-            }
+            String indexRepr = (!join && provided == null)? String.valueOf(rsIndex) : " ";
 
-            StringBuilder msg = new StringBuilder("  " + rsIndex + ": " + componentType + " " + rcName);
+            StringBuilder msg = new StringBuilder("  " + indexRepr + ": " + componentType + " " + rcName);
             if (provided != null) {
                 msg.append(" PRV");
                 if (join) {
@@ -106,7 +103,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
         return rsIndex;
     }
 
-    private StringBuilder processRecordComponent(List<Element> recursiveElements, TypeMirror rcType, ResultSetConstructor.Provided provided, boolean join) {
+    private StringBuilder processRecordComponent(int rsIndex, TypeMirror rcType, ResultSetConstructor.Provided provided, boolean join, List<Element> recursiveElements) {
         var typeKind = rcType.getKind();
         StringBuilder componentType = new StringBuilder();
 
@@ -139,7 +136,7 @@ public class RSConstructorProcessor extends AbstractProcessor {
                     }
                     componentType.append(" >");
                 } else {
-                    if (!DECLARED_TYPES.contains(simpleTypeName)) {
+                    if (!DECLARED_TYPES.contains(simpleTypeName.toString())) {
                         processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,"Not supported type: " + simpleTypeName);
                     }
                 }
