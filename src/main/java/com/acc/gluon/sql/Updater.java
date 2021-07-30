@@ -7,11 +7,10 @@ import java.sql.SQLException;
 public class Updater implements AutoCloseable {
 
     protected final PreparedStatement st;
-    private final StatementPreparator preparator;
 
     public Updater(Connection connection, String sql, StatementPreparator preparator) throws SQLException {
         st = connection.prepareStatement(sql);
-        this.preparator = preparator;
+        if (preparator != null) preparator.prepare(st);
     }
 
     @Override
@@ -25,7 +24,6 @@ public class Updater implements AutoCloseable {
     }
 
     public void update() throws SQLException {
-        if (this.preparator != null) this.preparator.prepare(st);
         st.executeUpdate();
     }
 
