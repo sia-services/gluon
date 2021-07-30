@@ -110,9 +110,9 @@ public class SQLManager implements AutoCloseable {
 
     public <Result,PK,Child> List<Result> groupBy(
             String sql,
-            Function<ResultSet,PK> by,
-            BiFunction<ResultSet,PK, Result> mainCtor,
-            Function<ResultSet,Child> childCtor,
+            ResultSetExtractor<PK> by,
+            ResultSetBiExtractor<Result, PK> mainCtor,
+            ResultSetExtractor<Child> childCtor,
             BiConsumer<Result,Child> linker
             ) throws Exception {
         ArrayList<Result> ret = new ArrayList<>(10);
@@ -122,20 +122,20 @@ public class SQLManager implements AutoCloseable {
 
         try (var iterable = this.query(sql).fetch()) {
             for (var rs : iterable) {
-                var pk = by.apply(rs);
+                var pk = by.extract(rs);
 
                 if (currentValue.getValue() == null) {
                     // first task
-                    currentValue.setValue(mainCtor.apply(rs, pk));
+                    currentValue.setValue(mainCtor.extract(rs, pk));
                     currentKey.setValue(pk);
                 } else if (!currentKey.getValue().equals(pk)) {
                     // current task
                     ret.add(currentValue.getValue());
                     // new task
-                    currentValue.setValue(mainCtor.apply(rs, pk));
+                    currentValue.setValue(mainCtor.extract(rs, pk));
                     currentKey.setValue(pk);
                 }
-                var child = childCtor.apply(rs);
+                var child = childCtor.extract(rs);
                 linker.accept(currentValue.getValue(), child);
             }
         }
