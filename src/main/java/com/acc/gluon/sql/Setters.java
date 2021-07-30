@@ -31,5 +31,4 @@ public class Setters {
         st.setBlob(index, new ByteArrayInputStream(value));
     }
 
-
 }
