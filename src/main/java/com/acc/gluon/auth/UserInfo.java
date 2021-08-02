@@ -24,7 +24,7 @@ public class UserInfo {
         this.email = null;
     }
 
-    private UserInfo(long id, String username, String personnelNr, String fullname, String telefon, String email) {
+    public UserInfo(long id, String username, String personnelNr, String fullname, String telefon, String email) {
         this.id = id;
         this.username = username;
         this.personnelNr = personnelNr;
