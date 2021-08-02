@@ -11,10 +11,26 @@ public class UserInfo {
     public final String username;
     public final String personnelNr;
 
+    public final String fullname;
+    public final String telefon;
+    public final String email;
+
     private UserInfo(long id, String username, String personnelNr) {
         this.id = id;
         this.username = username;
         this.personnelNr = personnelNr;
+        this.fullname = null;
+        this.telefon = null;
+        this.email = null;
+    }
+
+    private UserInfo(long id, String username, String personnelNr, String fullname, String telefon, String email) {
+        this.id = id;
+        this.username = username;
+        this.personnelNr = personnelNr;
+        this.fullname = fullname;
+        this.telefon = telefon;
+        this.email = email;
     }
 
     public static UserInfo extractFromContext(SecurityContext ctx) {
