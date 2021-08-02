@@ -1,6 +1,6 @@
 package com.acc.gluon.sql;
 
-import com.acc.gluon.utilities.Container;
+import com.acc.gluon.utilities.RefCell;
 
 import javax.sql.DataSource;
 import java.io.BufferedInputStream;
@@ -10,7 +10,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -117,30 +116,30 @@ public class SQLManager implements AutoCloseable {
             ) throws Exception {
         ArrayList<Result> ret = new ArrayList<>(10);
 
-        final Container<PK> currentKey = new Container<>(null);
-        final Container<Result> currentValue = new Container<>(null);
+        final RefCell<PK> currentKey = new RefCell<>(null);
+        final RefCell<Result> currentValue = new RefCell<>(null);
 
         try (var iterable = this.query(sql).fetch()) {
             for (var rs : iterable) {
                 var pk = by.extract(rs);
 
-                if (currentValue.getValue() == null) {
+                if (currentValue.get() == null) {
                     // first task
-                    currentValue.setValue(mainCtor.extract(rs, pk));
-                    currentKey.setValue(pk);
-                } else if (!currentKey.getValue().equals(pk)) {
+                    currentValue.set(mainCtor.extract(rs, pk));
+                    currentKey.set(pk);
+                } else if (!currentKey.get().equals(pk)) {
                     // current task
-                    ret.add(currentValue.getValue());
+                    ret.add(currentValue.get());
                     // new task
-                    currentValue.setValue(mainCtor.extract(rs, pk));
-                    currentKey.setValue(pk);
+                    currentValue.set(mainCtor.extract(rs, pk));
+                    currentKey.set(pk);
                 }
                 var child = childCtor.extract(rs);
-                linker.accept(currentValue.getValue(), child);
+                linker.accept(currentValue.get(), child);
             }
         }
-        if (currentValue.getValue() != null) {
-            ret.add(currentValue.getValue());
+        if (currentValue.get() != null) {
+            ret.add(currentValue.get());
         }
 
         return ret;

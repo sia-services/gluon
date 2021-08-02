@@ -1,17 +1,17 @@
 package com.acc.gluon.utilities;
 
-public class Container<T> {
+public class RefCell<T> {
     private T value;
 
-    public Container(T value) {
+    public RefCell(T value) {
         this.value = value;
     }
 
-    public T getValue() {
+    public T get() {
         return value;
     }
 
-    public void setValue(T value) {
+    public void set(T value) {
         this.value = value;
     }
 }
