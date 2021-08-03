@@ -2,7 +2,9 @@ package com.acc.gluon.mappers;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
+import javax.ws.rs.ext.Provider;
 
+@Provider
 public class NoContentExceptionMapper implements ExceptionMapper<NoContentException> {
     @Override
     public Response toResponse(NoContentException e) {

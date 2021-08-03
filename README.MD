@@ -4,7 +4,7 @@
 
 ***AccRoles***
 
-    enumeration of roles pentru authentification
+    enumeration of roles for authentification
 
 >see: SECURITATE.ROLES
 
@@ -28,6 +28,26 @@ smallrye-jwt (DefaultJWTCallerPrincipal)
 
 > uses: jakarta.ws.rs-api
 
+***IllegalArgumentExceptionMapper***
+
+    generate BAD REQUEST (400) response
+
+***NoContentExceptionMapper***
+
+    generate NO CONTENT (204) response
+
+***NotFoundExceptionMapper***
+
+    generate NOT FOUND (404) response
+
+***SQLExceptionMapper**
+
+    generate INTERNAL SERVER ERROR (500) response
+
+***UnsupportedOperationExceptionMapper***
+
+    generate BAD REQUEST (400) response
+
 ##sql
 
     thin wrapper over jdbc
@@ -48,7 +68,14 @@ smallrye-jwt (DefaultJWTCallerPrincipal)
 
     small usable utilities
 
+***ImmutablePair***
+
+    tuple of 2 (two) elements
+
+***Month***
+
+    contains utilities for Month manipulation (prev, next, delta, formatters)
+
 ***RefCell and BooleanRefCell***
 
-    simulare of IN/OUT parameters; (pass internal values by reference)
-
+    simulate IN/OUT parameters; (pass internal values by reference)
