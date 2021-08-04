@@ -43,6 +43,10 @@ public class Extractors {
         return getBoolean(rs, 1);
     }
 
+    public static String getString(ResultSet rs) throws SQLException {
+        return rs.getString(1);
+    }
+
     public static byte[] getBlob(ResultSet rs, int index) throws SQLException, IOException {
         return getBlob(rs, index, stream -> {
             try {
