@@ -31,7 +31,13 @@ public class PreparedQuery<T> implements AutoCloseable {
     }
 
     public List<T> fetchList() throws SQLException {
+        return this.fetchList(null);
+    }
+
+    public List<T> fetchList(StatementPreparator preparator) throws SQLException {
+        if (this.preparator != null) this.preparator.prepare(st);
         if (preparator != null) preparator.prepare(st);
+
         try (ResultSet rs = st.executeQuery()) {
             List<T> list = new ArrayList<>();
             while (rs.next()) {
@@ -42,7 +48,13 @@ public class PreparedQuery<T> implements AutoCloseable {
     }
 
     public Optional<T> fetchOne() throws SQLException {
+        return this.fetchOne(null);
+    }
+
+    public Optional<T> fetchOne(StatementPreparator preparator) throws SQLException {
+        if (this.preparator != null) this.preparator.prepare(st);
         if (preparator != null) preparator.prepare(st);
+
         try (ResultSet rs = st.executeQuery()) {
             if (rs.next()) {
                 return Optional.of(extractor.extract(rs));
@@ -53,7 +65,13 @@ public class PreparedQuery<T> implements AutoCloseable {
     }
 
     public CloseableIterable<T> fetch() throws SQLException {
+        return this.fetch(null);
+    }
+
+    public CloseableIterable<T> fetch(StatementPreparator preparator) throws SQLException {
+        if (this.preparator != null) this.preparator.prepare(st);
         if (preparator != null) preparator.prepare(st);
+
         ResultSet rs = st.executeQuery();
 
         final var closeableSt = st;
