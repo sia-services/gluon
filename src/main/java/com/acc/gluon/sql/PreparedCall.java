@@ -9,7 +9,7 @@ public class PreparedCall<V> implements AutoCloseable {
     private final CallableStatementExtractor<V> extractor;
 
     public PreparedCall(Connection connection, String sql, CallableStatementExtractor<V> extractor, CallableStatementPreparator preparator) throws SQLException {
-        String command = "{call " + sql + "}";
+        String command = "{? = call " + sql + "}";
         this.st = connection.prepareCall(command);
         this.extractor = extractor;
         preparator.prepareCall(st);

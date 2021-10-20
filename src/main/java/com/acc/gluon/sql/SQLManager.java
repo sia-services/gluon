@@ -187,7 +187,7 @@ public class SQLManager implements AutoCloseable {
     }
 
     public <V> V call(String sql, CallableStatementExtractor<V> extractor, CallableStatementPreparator preparator) throws SQLException {
-        String command = "{call " + sql + "}";
+        String command = "{? = call " + sql + "}";
         try (var cstmt = connection.prepareCall(command)) {
             preparator.prepareCall(cstmt);
             var ok = cstmt.execute();
