@@ -202,6 +202,10 @@ public class SQLManager implements AutoCloseable {
         }
     }
 
+    public <V> PreparedCall<V> prepareCall(String sql, CallableStatementExtractor<V> extractor, CallableStatementPreparator preparator) throws SQLException {
+        return new PreparedCall<>(connection, sql, extractor, preparator);
+    }
+
     @Override
     public void close() throws Exception {
         System.out.println("Closing SQLManager");
